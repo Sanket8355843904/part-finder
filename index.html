@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Find Part Code</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;800&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --bg: #0d0f14;
+    --surface: #161920;
+    --border: #252830;
+    --accent: #f0c040;
+    --accent2: #4cf0a0;
+    --text: #e8eaf0;
+    --muted: #6b7080;
+    --input-bg: #1c1f28;
+    --radius: 6px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    min-height: 100vh;
+    padding: 0;
+  }
+
+  .header {
+    border-bottom: 1px solid var(--border);
+    padding: 18px 32px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+
+  .header-icon {
+    width: 36px; height: 36px;
+    background: var(--accent);
+    border-radius: 4px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+  }
+
+  .header h1 {
+    font-size: 18px;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    color: var(--text);
+  }
+
+  .header span {
+    font-size: 12px;
+    color: var(--muted);
+    font-family: 'Space Mono', monospace;
+  }
+
+  .sync-btn {
+    margin-left: auto;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    padding: 6px 14px;
+    border-radius: var(--radius);
+    cursor: pointer;
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    display: flex; align-items: center; gap: 6px;
+    transition: all 0.2s;
+  }
+  .sync-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .sync-btn.loading { opacity: 0.6; pointer-events: none; }
+  .sync-btn .spin { animation: spin 1s linear infinite; display: inline-block; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .layout {
+    display: grid;
+    grid-template-columns: 320px 1fr;
+    gap: 0;
+    min-height: calc(100vh - 65px);
+  }
+
+  .sidebar {
+    border-right: 1px solid var(--border);
+    padding: 24px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+
+  .sidebar-title {
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    color: var(--muted);
+    text-transform: uppercase;
+    font-family: 'Space Mono', monospace;
+    margin-bottom: 4px;
+  }
+
+  .field-group { display: flex; flex-direction: column; gap: 6px; }
+
+  label {
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    font-family: 'Space Mono', monospace;
+  }
+
+  input[type="text"], select {
+    background: var(--input-bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 10px 12px;
+    border-radius: var(--radius);
+    font-family: 'Syne', sans-serif;
+    font-size: 13px;
+    width: 100%;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    -webkit-appearance: none;
+  }
+
+  input[type="text"]:focus, select:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px rgba(240,192,64,0.12);
+  }
+
+  select option { background: #1c1f28; }
+
+  .divider {
+    display: flex; align-items: center; gap: 10px;
+    color: var(--muted);
+    font-size: 11px;
+    font-family: 'Space Mono', monospace;
+  }
+  .divider::before, .divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  .clear-btn {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    width: 100%;
+    padding: 9px;
+    border-radius: var(--radius);
+    cursor: pointer;
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    transition: all 0.2s;
+    margin-top: 4px;
+  }
+  .clear-btn:hover { border-color: #ff6060; color: #ff6060; }
+
+  .main { padding: 24px 28px; overflow-x: auto; }
+
+  .results-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+  }
+
+  .results-count {
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    color: var(--muted);
+  }
+
+  .results-count .num {
+    color: var(--accent2);
+    font-weight: 700;
+  }
+
+  .status-bar {
+    font-size: 11px;
+    font-family: 'Space Mono', monospace;
+    padding: 6px 12px;
+    border-radius: var(--radius);
+    background: rgba(255,255,255,0.04);
+    color: var(--muted);
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12.5px;
+  }
+
+  thead th {
+    background: var(--surface);
+    color: var(--muted);
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 10px 14px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+
+  tbody tr {
+    border-bottom: 1px solid var(--border);
+    transition: background 0.15s;
+    cursor: default;
+  }
+
+  tbody tr:hover { background: rgba(240,192,64,0.04); }
+
+  td {
+    padding: 11px 14px;
+    vertical-align: middle;
+    color: var(--text);
+  }
+
+  td.code {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    color: var(--accent);
+    white-space: nowrap;
+  }
+
+  td.name { font-weight: 600; max-width: 240px; }
+
+  .badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 3px;
+    font-size: 10px;
+    font-family: 'Space Mono', monospace;
+    letter-spacing: 0.05em;
+    white-space: nowrap;
+  }
+
+  .badge.elec { background: rgba(76,240,160,0.12); color: var(--accent2); border: 1px solid rgba(76,240,160,0.25); }
+  .badge.mech { background: rgba(240,192,64,0.12); color: var(--accent); border: 1px solid rgba(240,192,64,0.25); }
+  .badge.other { background: rgba(255,255,255,0.06); color: var(--muted); border: 1px solid var(--border); }
+
+  .price-cell { font-family: 'Space Mono', monospace; font-size: 12px; text-align: right; white-space: nowrap; }
+  .price-cell .currency { color: var(--muted); font-size: 10px; }
+
+  .empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 280px;
+    color: var(--muted);
+    gap: 12px;
+  }
+  .empty-state .icon { font-size: 40px; opacity: 0.3; }
+  .empty-state p { font-size: 13px; font-family: 'Space Mono', monospace; }
+
+  .loading-state {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 280px;
+    color: var(--muted);
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    gap: 10px;
+  }
+
+  .url-setup {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.85);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    backdrop-filter: blur(4px);
+  }
+
+  .url-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 32px;
+    width: 480px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .url-box h2 { font-size: 20px; font-weight: 800; }
+  .url-box p { font-size: 13px; color: var(--muted); line-height: 1.6; }
+
+  .url-box ol {
+    font-size: 12px;
+    color: var(--muted);
+    font-family: 'Space Mono', monospace;
+    padding-left: 18px;
+    line-height: 2;
+  }
+
+  .url-box ol li span { color: var(--accent); }
+
+  .url-input-row { display: flex; gap: 8px; }
+  .url-input-row input {
+    flex: 1;
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+  }
+
+  .save-btn {
+    background: var(--accent);
+    color: #000;
+    border: none;
+    padding: 10px 20px;
+    border-radius: var(--radius);
+    cursor: pointer;
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 13px;
+    white-space: nowrap;
+    transition: opacity 0.2s;
+  }
+  .save-btn:hover { opacity: 0.85; }
+
+  @media (max-width: 768px) {
+    .layout { grid-template-columns: 1fr; }
+    .sidebar { border-right: none; border-bottom: 1px solid var(--border); }
+    .main { padding: 16px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- URL Setup Modal -->
+<div class="url-setup" id="urlSetup">
+  <div class="url-box">
+    <h2>⚙️ Connect Your Sheet</h2>
+    <p>This app reads directly from your Google Sheet via Apps Script. Follow these steps once:</p>
+    <ol>
+      <li>Open your sheet → <span>Extensions → Apps Script</span></li>
+      <li>Paste the <span>doGet()</span> script (provided separately)</li>
+      <li>Deploy → <span>New Deployment → Web App</span></li>
+      <li>Set access to <span>"Anyone"</span>, copy the URL</li>
+      <li>Paste it below 👇</li>
+    </ol>
+    <div class="url-input-row">
+      <input type="text" id="scriptUrlInput" placeholder="https://script.google.com/macros/s/..." />
+      <button class="save-btn" onclick="saveUrl()">Connect</button>
+    </div>
+    <p style="font-size:11px; color: var(--muted);">The URL is saved in your browser — you only need to do this once.</p>
+  </div>
+</div>
+
+<div class="header">
+  <div class="header-icon">🔍</div>
+  <div>
+    <h1>Find Part Code</h1>
+    <span id="lastSync">Not synced yet</span>
+  </div>
+  <button class="sync-btn" id="syncBtn" onclick="fetchData()">
+    <span id="syncIcon">↻</span> Sync Sheet
+  </button>
+</div>
+
+<div class="layout">
+  <div class="sidebar">
+    <div class="sidebar-title">Filter Parts</div>
+
+    <div class="field-group">
+      <label>Master Assembly Name</label>
+      <input type="text" id="f_assembly" placeholder="e.g. BATTERY COWL" oninput="applyFilters()" />
+    </div>
+
+    <div class="field-group">
+      <label>Final Item Name</label>
+      <input type="text" id="f_item" placeholder="e.g. charger, bolt, wire" oninput="applyFilters()" />
+    </div>
+
+    <div class="divider">dropdowns</div>
+
+    <div class="field-group">
+      <label>Category</label>
+      <select id="f_category" onchange="applyFilters()">
+        <option value="">All Categories</option>
+      </select>
+    </div>
+
+    <div class="field-group">
+      <label>Category-Sub</label>
+      <select id="f_categorySub" onchange="applyFilters()">
+        <option value="">All Sub-Categories</option>
+      </select>
+    </div>
+
+    <div class="field-group">
+      <label>Unit</label>
+      <select id="f_unit" onchange="applyFilters()">
+        <option value="">All Units</option>
+      </select>
+    </div>
+
+    <button class="clear-btn" onclick="clearAll()">✕ Clear All Filters</button>
+  </div>
+
+  <div class="main">
+    <div class="results-header">
+      <div class="results-count">Showing <span class="num" id="resultCount">—</span> results</div>
+      <div class="status-bar" id="statusBar">Load your sheet to begin</div>
+    </div>
+    <div id="tableWrap"></div>
+  </div>
+</div>
+
+<script>
+  const STORAGE_KEY = 'partfinder_script_url';
+  const CACHE_KEY   = 'partfinder_data_cache';
+  let allData = [];
+
+  // ── Boot ──────────────────────────────────────────────────────────────────
+  const HARDCODED_URL = 'https://script.google.com/macros/s/AKfycbyQxZIiL85jQHJfFkKagFqqPdtCRQGlnGDjz2AtTp4Qtnk-dgcAtV7JESIxIxvT09Dw/exec';
+
+  window.onload = () => {
+    localStorage.setItem(STORAGE_KEY, HARDCODED_URL);
+    document.getElementById('urlSetup').style.display = 'none';
+    loadFromCache();
+    fetchData();
+  };
+
+  function saveUrl() {
+    const url = document.getElementById('scriptUrlInput').value.trim();
+    if (!url.startsWith('https://')) return alert('Please enter a valid Apps Script URL.');
+    localStorage.setItem(STORAGE_KEY, url);
+    document.getElementById('urlSetup').style.display = 'none';
+    fetchData();
+  }
+
+  // ── Data fetch ────────────────────────────────────────────────────────────
+  function loadFromCache() {
+    const raw = localStorage.getItem(CACHE_KEY);
+    if (raw) {
+      allData = JSON.parse(raw);
+      buildDropdowns();
+      applyFilters();
+      setStatus('Loaded from cache');
+    }
+  }
+
+  async function fetchData() {
+    const url = localStorage.getItem(STORAGE_KEY);
+    if (!url) return;
+    const btn = document.getElementById('syncBtn');
+    const icon = document.getElementById('syncIcon');
+    btn.classList.add('loading');
+    icon.classList.add('spin');
+    icon.textContent = '↻';
+    setStatus('Syncing…');
+    setTableLoading();
+
+    try {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const data = await res.json();
+      allData = data;
+      localStorage.setItem(CACHE_KEY, JSON.stringify(data));
+      buildDropdowns();
+      applyFilters();
+      const now = new Date().toLocaleTimeString();
+      document.getElementById('lastSync').textContent = 'Last synced: ' + now;
+      setStatus(data.length + ' rows loaded');
+    } catch (e) {
+      setStatus('⚠ Sync failed — ' + e.message);
+      console.error(e);
+    } finally {
+      btn.classList.remove('loading');
+      icon.classList.remove('spin');
+      icon.textContent = '↻';
+    }
+  }
+
+  // ── Dropdowns ─────────────────────────────────────────────────────────────
+  function buildDropdowns() {
+    populateSelect('f_category',    unique(allData, 'category'));
+    populateSelect('f_categorySub', unique(allData, 'categorySub'));
+    populateSelect('f_unit',        unique(allData, 'unit'));
+  }
+
+  function unique(data, key) {
+    return [...new Set(data.map(r => r[key]).filter(Boolean))].sort();
+  }
+
+  function populateSelect(id, values) {
+    const sel = document.getElementById(id);
+    const current = sel.value;
+    sel.innerHTML = '<option value="">All</option>';
+    values.forEach(v => {
+      const o = document.createElement('option');
+      o.value = v; o.textContent = v;
+      sel.appendChild(o);
+    });
+    if (current) sel.value = current;
+  }
+
+  // ── Filtering ─────────────────────────────────────────────────────────────
+  function applyFilters() {
+    const assembly    = document.getElementById('f_assembly').value.trim().toLowerCase();
+    const item        = document.getElementById('f_item').value.trim().toLowerCase();
+    const category    = document.getElementById('f_category').value;
+    const categorySub = document.getElementById('f_categorySub').value;
+    const unit        = document.getElementById('f_unit').value;
+
+    const filtered = allData.filter(r => {
+      if (assembly    && !matchFuzzy(r.masterAssembly, assembly))  return false;
+      if (item        && !matchFuzzy(r.finalItemName,  item))      return false;
+      if (category    && r.category    !== category)               return false;
+      if (categorySub && r.categorySub !== categorySub)            return false;
+      if (unit        && r.unit        !== unit)                    return false;
+      return true;
+    });
+
+    document.getElementById('resultCount').textContent = filtered.length;
+    renderTable(filtered);
+  }
+
+  function matchFuzzy(field, query) {
+    if (!field) return false;
+    return field.toLowerCase().includes(query);
+  }
+
+  function clearAll() {
+    ['f_assembly','f_item'].forEach(id => document.getElementById(id).value = '');
+    ['f_category','f_categorySub','f_unit'].forEach(id => document.getElementById(id).value = '');
+    applyFilters();
+  }
+
+  // ── Table ─────────────────────────────────────────────────────────────────
+  function setTableLoading() {
+    document.getElementById('tableWrap').innerHTML =
+      '<div class="loading-state"><span class="spin" style="font-size:18px">↻</span> Fetching from sheet…</div>';
+  }
+
+  function renderTable(rows) {
+    const wrap = document.getElementById('tableWrap');
+    if (!rows.length) {
+      wrap.innerHTML = '<div class="empty-state"><div class="icon">📭</div><p>No matching parts found.</p></div>';
+      return;
+    }
+
+    const thead = `
+      <thead>
+        <tr>
+          <th>Parts Code</th>
+          <th>Final Item Name</th>
+          <th>Master Assembly</th>
+          <th>Category</th>
+          <th>Sub-Category</th>
+          <th>Unit</th>
+          <th style="text-align:right">Price</th>
+          <th style="text-align:right">DP</th>
+        </tr>
+      </thead>`;
+
+    const tbody = '<tbody>' + rows.map(r => {
+      const badgeCls = r.category === 'Electrical' ? 'elec' : r.category === 'Mechanical' ? 'mech' : 'other';
+      const price = r.price ? '₹' + Number(r.price).toLocaleString('en-IN') : '—';
+      const dp    = r.dp    ? '₹' + Number(r.dp).toLocaleString('en-IN')    : '—';
+      return `<tr>
+        <td class="code">${esc(r.uniquePartsCode)}</td>
+        <td class="name">${esc(r.finalItemName)}</td>
+        <td>${esc(r.masterAssembly)}</td>
+        <td><span class="badge ${badgeCls}">${esc(r.category)}</span></td>
+        <td><span class="badge other">${esc(r.categorySub)}</span></td>
+        <td>${esc(r.unit)}</td>
+        <td class="price-cell">${price}</td>
+        <td class="price-cell">${dp}</td>
+      </tr>`;
+    }).join('') + '</tbody>';
+
+    wrap.innerHTML = '<table>' + thead + tbody + '</table>';
+  }
+
+  function esc(v) {
+    if (v == null) return '—';
+    return String(v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  function setStatus(msg) {
+    document.getElementById('statusBar').textContent = msg;
+  }
+</script>
+</body>
+</html>
